@@ -33,9 +33,10 @@ body {
 }
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 280px 1fr;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -45,6 +46,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .brand {
@@ -162,6 +165,8 @@ p,
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .topbar {
@@ -206,7 +211,7 @@ p,
 .chat-scroll {
   flex: 1;
   overflow: auto;
-  padding: 26px 0 150px;
+  padding: 26px 0 260px;
 }
 
 .messages {
@@ -300,6 +305,7 @@ p,
   bottom: 0;
   padding: 18px 20px 24px;
   background: linear-gradient(180deg, rgba(247, 247, 248, 0) 0%, rgba(247, 247, 248, 0.9) 18%, rgba(247, 247, 248, 1) 100%);
+  z-index: 20;
 }
 
 .composer-shell {
@@ -456,11 +462,15 @@ button.full-width {
 @media (max-width: 960px) {
   .app {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
 
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    height: auto;
+    overflow: visible;
   }
 
   .composer-wrap {
@@ -468,6 +478,11 @@ button.full-width {
   }
 
   .chat-scroll {
-    padding-bottom: 210px;
+    padding-bottom: 260px;
+  }
+
+  .main {
+    height: auto;
+    overflow: visible;
   }
 }

@@ -1,88 +1,134 @@
-import React from 'react'
+import React, { useState } from 'react'
+import Header from '../components/partials/Header'
+import SideBar from '../components/partials/SideBar'
+import EmptyState from '../components/EmptyState'
+import Messages from '../components/Messages'
+import Auth from '../utils/auth'
 
 const Dashboard = () => {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+
+  const handleSend = async (e) => {
+    e.preventDefault()
+
+    if (!input.trim()) return
+
+    // ✅ Add user + empty AI message together (avoid race condition)
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: input },
+      { role: "assistant", content: "" }
+    ])
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/conversations/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Auth.getToken()}`,
+        },
+        body: JSON.stringify({
+          prompt: input,
+          provider: "gemini",
+        }),
+      })
+
+      // ✅ Handle backend errors
+      if (!response.ok) {
+        const text = await response.text()
+        console.error("Server error:", text)
+        return
+      }
+
+      // ✅ Ensure stream exists
+      if (!response.body) {
+        console.error("No response body (stream not available)")
+        return
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+
+        // ✅ Safe immutable update
+        setMessages((prev) => {
+          const updated = [...prev]
+          const lastIndex = updated.length - 1
+
+          updated[lastIndex] = {
+            ...updated[lastIndex],
+            content: updated[lastIndex].content + chunk,
+          }
+
+          return updated
+        })
+      }
+
+    } catch (err) {
+      console.error("Error:", err)
+    }
+
+    setInput("")
+  }
+
   return (
-    <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-badge">AI</div>
-        <div>AI Tutor</div>
-      </div>
+    <div className="app">
+      <SideBar />
+      <main className="main">
+        <Header />
 
-      <button id="newChatBtn" class="new-chat" type="button">+ New tutoring chat</button>
-      <input class="search-box" type="text" placeholder="Search chats" />
-
-      <div class="history">
-        <div class="history-item">
-          <strong>Fractions lesson</strong>
-          <span>Simple explanation with practice questions</span>
-        </div>
-        <div class="history-item">
-          <strong>Photosynthesis basics</strong>
-          <span>Science answer for middle school level</span>
-        </div>
-        <div class="history-item">
-          <strong>Python loops</strong>
-          <span>Beginner coding help with examples</span>
-        </div>
-      </div>
-
-      <section class="sidebar-card">
-        <h2>How it helps</h2>
-        <p>Ask questions in a natural way and get simple explanations, examples, and a short practice task.</p>
-      </section>
-
-      <section class="sidebar-card">
-        <h2>Better prompts</h2>
-        <ul>
-          <li>Mention the subject and class level.</li>
-          <li>Ask for a simple or step-by-step explanation.</li>
-          <li>Request examples, exercises, or a quick quiz.</li>
-        </ul>
-      </section>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="topbar-row">
-          <div>
-            <strong>AI Tutor Conversation</strong>
-            <span id="sessionText">Ask a question to begin.</span>
-          </div>
-          <div class="topbar-actions">
-            <div class="user-pill" id="userInfo">Guest</div>
-            <button class="logout" id="logoutBtn" type="button">Logout</button>
-          </div>
-        </div>
-      </header>
-
-      <div class="chat-scroll">
-        <div class="empty-state" id="emptyState">
-          <section class="hero">
-            <h1>What would you like to learn today?</h1>
-            <p>Use the chat box below to ask about math, science, English, programming, history, or any study topic you want help with.</p>
-          </section>
+        <div className="chat-scroll">
+          {messages.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <Messages messages={messages} />
+          )}
         </div>
 
-        <div class="messages" id="messages" hidden></div>
-      </div>
+        <div className="composer-wrap">
+          <div className="composer-shell">
 
-      <div class="composer-wrap">
-        <div class="composer-shell">
-          <form id="chatForm" class="composer">
-            <textarea id="question" placeholder="Message AI Tutor..."></textarea>
-            <div class="composer-actions">
-              <div class="status" id="status">Ready</div>
-              <div class="buttons">
-                <button class="ghost" id="sampleBtn" type="button">Sample Prompt</button>
-                <button class="send" type="submit">Send</button>
+            {/* ✅ FIXED: form handles submit */}
+            <form onSubmit={handleSend} className="composer">
+
+              {/* ✅ FIXED: controlled textarea */}
+              <textarea
+                id="question"
+                placeholder="Message AI Tutor..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+              />
+
+              <div className="composer-actions">
+                <div className="status">Ready</div>
+
+                <div className="buttons">
+                  <button
+                    className="ghost"
+                    type="button"
+                  >
+                    Sample Prompt
+                  </button>
+
+                  {/* ✅ FIXED: no onClick */}
+                  <button className="send" type="submit">
+                    Send
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
+
+            </form>
+          </div>
         </div>
-      </div>
-    </main>
-  </div>
+
+      </main>
+    </div>
   )
 }
 
